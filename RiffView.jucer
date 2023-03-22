@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="gXrbeV" name="RiffView" projectType="guiapp" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1">
+  <MAINGROUP id="EY05eR" name="RiffView">
+    <GROUP id="{ACDF7C8D-844F-B16C-A716-F7CAE35BB951}" name="Source">
+      <FILE id="xyQx9u" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+      <FILE id="Fn8NCK" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
+      <FILE id="Wf4Imb" name="MainComponent.cpp" compile="1" resource="0"
+            file="Source/MainComponent.cpp"/>
+      <FILE id="Ay15Ik" name="riffrw.h" compile="0" resource="0" file="Source/riffrw.h"/>
+    </GROUP>
+  </MAINGROUP>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
+  <EXPORTFORMATS>
+    <VS2022 targetFolder="Builds/VisualStudio2022">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="RiffView"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="RiffView"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_core" path="../../../../SDKs/JUCE-7.0.4/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../../../../SDKs/JUCE-7.0.4/modules"/>
+        <MODULEPATH id="juce_events" path="../../../../SDKs/JUCE-7.0.4/modules"/>
+        <MODULEPATH id="juce_graphics" path="../../../../SDKs/JUCE-7.0.4/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../../../../SDKs/JUCE-7.0.4/modules"/>
+      </MODULEPATHS>
+    </VS2022>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+  </MODULES>
+</JUCERPROJECT>

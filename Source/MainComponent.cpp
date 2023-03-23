@@ -13,11 +13,8 @@ class RiffNodeTempFile : public juce::ReferenceCountedObject
 protected:
 	juce::File tmpPath;
 	const riffrw::RiffNode* node;
-public:
-	using Ptr = juce::ReferenceCountedObjectPtr<RiffNodeTempFile>;
 	RiffNodeTempFile(const juce::File& srcpath, const riffrw::RiffNode* n) : node(n)
 	{
-		DBG("RiffNodeTempFile: construct");
 		juce::String fn(node->ckinfo.pathElement());
 		fn = fn.replaceCharacter(' ', '_');
 		tmpPath = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile(fn + ".riffck");
@@ -37,17 +34,21 @@ public:
 				ostr.write(buf.data(), lseg);
 				pos += lseg;
 			}
-			DBG("RiffNodeTempFile: path=" << tmpPath.getFullPathName().quoted() << " " << (int)len << " bytes");
 		}
 	}
+public:
 	~RiffNodeTempFile()
 	{
 		if(tmpPath.exists()) tmpPath.deleteFile();
-		DBG("RiffNodeTempFile: destruct");
 	}
 	juce::File getTempPath() const
 	{
 		return tmpPath;
+	}
+	using Ptr = juce::ReferenceCountedObjectPtr<RiffNodeTempFile>;
+	static Ptr createInstance(const juce::File& srcpath, const riffrw::RiffNode* n)
+	{
+		return new RiffNodeTempFile(srcpath, n);
 	}
 };
 
@@ -144,7 +145,7 @@ public:
 		int numrows = (int)((length + 15) / 16);
 		int rowfrom = rcclip.getY() / charHeight;
 		if(numrows <= rowfrom) return;
-		int rowthru = std::min(numrows - 1, (rcclip.getBottom() + charHeight - 1) / charHeight);
+		int rowthru = std::min(numrows - 1, rcclip.getBottom() / charHeight);
 		if(rowthru < rowfrom) return;
 		float ytop = (float)rowfrom * charHeight;
 		float ybottom = (float)(rowthru + 1) * charHeight;
@@ -157,7 +158,7 @@ public:
 		int64_t ckdataoffset = node->ckinfo.hdroffset + 8;
 		inputStream->setPosition(ckdataoffset + rowfrom * 16);
 		std::array<uint8_t, 16> buffer;
-		uint32_t cksize = node->ckinfo.header.cksize, ckpos = 0;
+		uint32_t cksize = node->ckinfo.header.cksize, ckpos = rowfrom * 16;
 		for(int row = rowfrom; row <= rowthru; ++row)
 		{
 			if(cksize <= ckpos) break;
@@ -182,7 +183,7 @@ public:
 			}
 			// col: text
 			int xtxt = (8 + 2 + 12 + 1 + 12 + 1 + 12 + 1 + 12 + 1) * charWidth;
-			for(int i = 0; i < 16; ++i) { if(!buffer[i]) buffer[i] = '.'; }
+			for(int i = 0; i < lrow; ++i) { if(!buffer[i]) buffer[i] = '.'; }
 			g.drawSingleLineText(juce::String(juce::CharPointer_UTF8((const char*)buffer.data()), lrow), xtxt, y + ascent, juce::Justification::left);
 			ckpos += lrow;
 		}
@@ -219,6 +220,10 @@ public:
 	{
 		return idealPaneWidth;
 	}
+	juce::Point<int> getScrollUnitPx() const
+	{
+		return { charWidth, charHeight };
+	}
 };
 
 // ================================================================================
@@ -231,8 +236,6 @@ protected:
 	{
 	public:
 		std::function<void()> onMouseDrag;
-		ItemComponent() {}
-		virtual void paint(juce::Graphics&) override {}
 		virtual void mouseDrag(const juce::MouseEvent&) override { if(onMouseDrag) onMouseDrag(); }
 	};
 	struct SharedImages
@@ -317,7 +320,7 @@ class RiffNodeTreeView : public juce::TreeView
 // ================================================================================
 // MainComponent
 
-class MainComponent : public juce::Component, public juce::MenuBarModel, public juce::ApplicationCommandTarget, public juce::FileDragAndDropTarget
+class MainComponent : public juce::Component, public juce::FileDragAndDropTarget, public juce::MenuBarModel, public juce::ApplicationCommandTarget
 {
 private:
 	enum CommandIDs
@@ -349,6 +352,7 @@ private:
 	SplitBar stretchableLayoutResizerBar;
 	RiffDocument riffDocument;
 	bool isPerformingFileDragSource = false;
+	enum { InfoPaneHeight = 20 };
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 public:
 	MainComponent() : stretchableLayoutResizerBar(&stretchableLayoutManager, 1, true)
@@ -373,6 +377,8 @@ public:
 		treeView.setMultiSelectEnabled(false);
 		addAndMakeVisible(viewport);
 		viewport.setViewedComponent(&hexViewPane, false);
+		juce::Point<int> sup = hexViewPane.getScrollUnitPx();
+		viewport.setSingleStepSizes(sup.x, sup.y);
 		hexViewPane.onMouseDrag = [this](const HexViewPane* hvp)
 		{
 			const riffrw::RiffNode* n = hvp->getRiffNode();
@@ -390,7 +396,7 @@ public:
 	{
 		if(isPerformingFileDragSource) return;
 		isPerformingFileDragSource = true;
-		RiffNodeTempFile::Ptr tmpfile = new RiffNodeTempFile(path, n);
+		RiffNodeTempFile::Ptr tmpfile = RiffNodeTempFile::createInstance(path, n);
 		juce::DragAndDropContainer::performExternalDragDropOfFiles({ tmpfile->getTempPath().getFullPathName() }, false, nullptr, [this, tmpfile]()
 		{
 			isPerformingFileDragSource = false;
@@ -443,7 +449,7 @@ public:
 	{
 		juce::Rectangle<int> rc = getLocalBounds();
 		menuBarComponent.setBounds(rc.removeFromTop(getLookAndFeel().getDefaultMenuBarHeight()));
-		infoLabel.setBounds(rc.removeFromTop((int)infoLabel.getFont().getHeight() + 2));
+		infoLabel.setBounds(rc.removeFromTop(InfoPaneHeight));
 		juce::Component* vcmp[] = { &treeView, &stretchableLayoutResizerBar, &viewport };
 		stretchableLayoutManager.layOutComponents(vcmp, 3, rc.getX(), rc.getY(), rc.getWidth(), rc.getHeight(), false, true);
 		hexViewPane.updatePaneSize();
@@ -451,6 +457,20 @@ public:
 	virtual void paint(juce::Graphics& g) override
 	{
 		g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+	}
+	// --------------------------------------------------------------------------------
+	// juce::FileDragAndDropTarget
+	virtual bool isInterestedInFileDrag(const juce::StringArray& files) override
+	{
+		if(isPerformingFileDragSource) return false;
+		if(1 < files.size()) return false;
+		return true;
+	}
+	virtual void filesDropped(const juce::StringArray& files, int, int) override
+	{
+		if(isPerformingFileDragSource) return;
+		if(1 < files.size()) return;
+		loadContent(juce::File(files[0]));
 	}
 	// --------------------------------------------------------------------------------
 	// juce::MenuBarModel
@@ -518,20 +538,6 @@ public:
 				return true;
 		}
 		return false;
-	}
-	// --------------------------------------------------------------------------------
-	// juce::FileDragAndDropTarget
-	virtual bool isInterestedInFileDrag(const juce::StringArray& files) override
-	{
-		if(isPerformingFileDragSource) return false;
-		return files.size() == 1;
-	}
-	virtual void filesDropped(const juce::StringArray& files, int, int) override
-	{
-		if(isPerformingFileDragSource) return;
-		if(1 < files.size()) return;
-		DBG("filesDropped " << files[0].quoted());
-		loadContent(juce::File(files[0]));
 	}
 };
 

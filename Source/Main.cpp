@@ -58,7 +58,6 @@ public:
 	{
 		if(juce::LookAndFeel_V4* lf4 = dynamic_cast<juce::LookAndFeel_V4*>(&juce::LookAndFeel::getDefaultLookAndFeel()))
 		{
-//			lf4->setColourScheme(juce::LookAndFeel_V4::getLightColourScheme());
 			lf4->setColourScheme(LightColourScheme);
 		}
 		mainWindow.reset(new MainWindow(getApplicationName()));
@@ -77,6 +76,4 @@ public:
 
 };
 
-//==============================================================================
-// This macro generates the main() routine that launches the app.
 START_JUCE_APPLICATION(RiffViewApplication)

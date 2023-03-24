@@ -71,11 +71,9 @@ public:
 		contentPath = {};
 		rootNode = {};
 		riffrw::RiffNode n = {};
-		if(riffrw::RiffNode::readTreeFromFile(std::wstring(path.getFullPathName().toUTF16()), &n))
-		{
-			rootNode = n;
-			contentPath = path;
-		}
+		if(!riffrw::RiffNode::readTreeFromFile(std::wstring(path.getFullPathName().toUTF16()), &n)) return false;
+		rootNode = n;
+		contentPath = path;
 		return true;
 	}
 	const juce::File& getContentPath() const
@@ -412,7 +410,11 @@ public:
 	bool loadContent(const juce::File& path)
 	{
 		clearContent();
-		if(!riffDocument.loadContent(path)) return false;
+		if(!riffDocument.loadContent(path))
+		{
+			juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "ERROR", "failed to load");
+			return false;
+		}
 		const riffrw::RiffNode& nroot = riffDocument.getRootNode();
 		juce::TreeViewItem* tvi = generateTree(&nroot);
 		treeView.setRootItem(tvi);

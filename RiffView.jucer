@@ -19,11 +19,11 @@
         <CONFIGURATION isDebug="0" name="Release" targetName="RiffView"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
-        <MODULEPATH id="juce_core" path="../../../../SDKs/JUCE-7.0.4/modules"/>
-        <MODULEPATH id="juce_data_structures" path="../../../../SDKs/JUCE-7.0.4/modules"/>
-        <MODULEPATH id="juce_events" path="../../../../SDKs/JUCE-7.0.4/modules"/>
-        <MODULEPATH id="juce_graphics" path="../../../../SDKs/JUCE-7.0.4/modules"/>
-        <MODULEPATH id="juce_gui_basics" path="../../../../SDKs/JUCE-7.0.4/modules"/>
+        <MODULEPATH id="juce_core" path="../../../../SDKs/JUCE-7.0.5/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../../../../SDKs/JUCE-7.0.5/modules"/>
+        <MODULEPATH id="juce_events" path="../../../../SDKs/JUCE-7.0.5/modules"/>
+        <MODULEPATH id="juce_graphics" path="../../../../SDKs/JUCE-7.0.5/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../../../../SDKs/JUCE-7.0.5/modules"/>
       </MODULEPATHS>
     </VS2022>
   </EXPORTFORMATS>

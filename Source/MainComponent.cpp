@@ -328,7 +328,6 @@ private:
 	};
 	juce::ApplicationCommandManager applicationCommandManager;
 	juce::MenuBarComponent menuBarComponent;
-	std::unique_ptr<juce::FileChooser> fileChooser;
 	juce::Label infoLabel;
 	RiffNodeTreeView treeView;
 	juce::Viewport viewport;
@@ -387,7 +386,6 @@ public:
 	}
 	virtual ~MainComponent() override
 	{
-		fileChooser = nullptr;
 		clearContent();
 	}
 	void performFileDragSource(const juce::File& path, const riffrw::RiffNode* n)
@@ -526,15 +524,16 @@ public:
 		switch(info.commandID)
 		{
 			case CommandIDs::CommandFileOpen:
-				fileChooser = nullptr;
-				fileChooser = std::make_unique<juce::FileChooser>("Open RIFF file");
-				fileChooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [this](const juce::FileChooser& fc)
+			{
+				std::shared_ptr<juce::FileChooser> fcdlg = std::make_unique<juce::FileChooser>("Open RIFF file");
+				fcdlg->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [this, fcdlg](const juce::FileChooser& fc) mutable
 				{
 					juce::File path = fc.getResult();
 					if(path != juce::File()) loadContent(fc.getResult());
-					fileChooser = nullptr;
+					fcdlg.reset();
 				});
 				return true;
+			}
 			case CommandIDs::CommandAppExit:
 				juce::JUCEApplication::getInstance()->systemRequestedQuit();
 				return true;

@@ -300,7 +300,7 @@ public:
 		// text
 		g.setColour(clrtxt);
 		juce::String s(node->ckinfo.pathElement());
-		if(!iscontainer) s += juce::String::formatted(" (%u bytes)", node->ckinfo.header.cksize);
+		s += juce::String::formatted(" (%u-%u)", node->ckinfo.hdroffset, node->ckinfo.header.cksize);
 		g.drawText(s, rc, juce::Justification::left, true);
 	}
 	virtual void itemSelectionChanged(bool) override

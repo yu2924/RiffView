@@ -41,11 +41,16 @@ namespace riffrw
 
 	class RiffReader
 	{
-	public:
+	protected:
 		std::istream& stream;
 		std::list<ChunkInfo> ckstack;
+	public:
 		RiffReader(std::istream& str) : stream(str)
 		{
+		}
+		std::istream& getStream()
+		{
+			return stream;
 		}
 		operator bool() const
 		{
@@ -89,15 +94,20 @@ namespace riffrw
 
 	class RiffWriter
 	{
-	public:
+	protected:
 		std::ostream& stream;
 		std::list<ChunkInfo> ckstack;
+	public:
 		RiffWriter(std::ostream& str) : stream(str)
 		{
 		}
 		~RiffWriter()
 		{
 			while(!ckstack.empty()) ascend();
+		}
+		std::ostream& getStream()
+		{
+			return stream;
 		}
 		operator bool() const
 		{
@@ -146,10 +156,22 @@ namespace riffrw
 
 	struct RiffNode
 	{
+		static bool transferstream(std::istream& istr, std::ostream& ostr, size_t len)
+		{
+			std::vector<char> buf(1024);
+			size_t i = 0;
+			while(i < len)
+			{
+				size_t lseg = std::min(len - i, buf.size());
+				if(!istr.read(buf.data(), lseg).good()) return false;
+				if(!ostr.write(buf.data(), lseg).good()) return false;
+				i += lseg;
+			}
+			return true;
+		}
 		ChunkInfo ckinfo = {};
 		RiffNode* parent = 0;
 		std::list<RiffNode> subnodes;
-		std::shared_ptr<std::vector<char> > replacingdata;
 		RiffNode() = default;
 		RiffNode(uint32_t uckid, uint32_t utype = 0)
 		{
@@ -176,6 +198,7 @@ namespace riffrw
 			nsnew.parent = this;
 			return nsnew;
 		}
+		// recursive r/w
 		static bool readTree(RiffReader& reader, RiffNode* pn)
 		{
 			if(!reader.descend(&pn->ckinfo)) return false;
@@ -190,39 +213,24 @@ namespace riffrw
 			if(!reader.ascend()) return false;
 			return true;
 		}
-		static bool writeTree(const RiffNode& n, std::istream& istr, RiffWriter& writer)
+		static bool writeTree(const RiffNode& n, RiffWriter& writer, std::function<bool(const RiffNode& n, RiffWriter& writer)> ckhandler)
 		{
 			if(!writer.descend(n.ckinfo.header.ckid, n.ckinfo.type)) return false;
 			if(n.ckinfo.header.isContainer())
 			{
 				for(const auto& ns : n.subnodes)
 				{
-					if(!writeTree(ns, istr, writer)) return false;
+					if(!writeTree(ns, writer, ckhandler)) return false;
 				}
 			}
 			else
 			{
-				if(n.replacingdata)
-				{
-					if(!writer.write(n.replacingdata->data(), n.replacingdata->size())) return false;
-				}
-				else
-				{
-					istr.seekg(n.ckinfo.hdroffset + 8);
-					std::vector<char> buf(1024);
-					size_t c = n.ckinfo.header.cksize, i = 0;
-					while(i < c)
-					{
-						size_t lseg = std::min(c - i, buf.size());
-						istr.read(buf.data(), lseg);
-						if(!writer.write(buf.data(), lseg)) return false;
-						i += lseg;
-					}
-				}
+				if(!ckhandler(n, writer)) return false;
 			}
 			if(!writer.ascend()) return false;
 			return true;
 		}
+		// stream i/o
 		static bool readTreeFromStream(std::istream& istr, RiffNode* pn)
 		{
 			RiffReader reader(istr);
@@ -234,19 +242,18 @@ namespace riffrw
 			if(!istr.good()) return false;
 			return readTreeFromStream(istr, pn);
 		}
-		static bool writeTreeToStream(const RiffNode& n, std::istream& istr, std::ostream& ostr)
+		static bool writeTreeToStream(const RiffNode& n, std::ostream& ostr, std::function<bool(const RiffNode& n, RiffWriter& writer)> ckhandler)
 		{
 			RiffWriter writer(ostr);
-			return writeTree(n, istr, writer);
+			return writeTree(n, writer, ckhandler);
 		}
-		static bool writeTreeToFile(const RiffNode& n, const std::filesystem::path& inpath, const std::filesystem::path& outpath)
+		static bool writeTreeToFile(const RiffNode& n, const std::filesystem::path& outpath, std::function<bool(const RiffNode& n, RiffWriter& writer)> ckhandler)
 		{
-			std::fstream istr(inpath, std::ios::in | std::ios::binary);
-			if(!istr.good()) return false;
 			std::fstream ostr(outpath, std::ios::out | std::ios::binary | std::ios::trunc);
 			if(!ostr.good()) return false;
-			return writeTreeToStream(n, istr, ostr);
+			return writeTreeToStream(n, ostr, ckhandler);
 		}
+		// traverse
 		static void traverseTree(RiffNode& n, bool& continueFlag, std::function<void(RiffNode&, bool&)> callback)
 		{
 			if(callback) callback(n, continueFlag);
